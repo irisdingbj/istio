@@ -135,6 +135,10 @@ func GetRootCmd(args []string, printf, fatalf shared.FormatFn) *cobra.Command {
 	rootCmd.PersistentFlags().BoolVar(&serverArgs.EnableServer, "enable-server", serverArgs.EnableServer, "Run galley server mode")
 	rootCmd.PersistentFlags().StringVarP(&serverArgs.AccessListFile, "accessListFile", "", serverArgs.AccessListFile,
 		"The access list yaml file that contains the allowd mTLS peer ids.")
+	rootCmd.PersistentFlags().StringVar(&serverArgs.MeshConfigFilePath, "mesh-config-file-path", serverArgs.MeshConfigFilePath,
+		"Mech config file path")
+	rootCmd.PersistentFlags().DurationVar(&serverArgs.MeshConfigFileCheckInterval, "mesh-config-file-check-interval", serverArgs.MeshConfigFileCheckInterval,
+		"Mech config file path")
 	serverArgs.IntrospectionOptions.AttachCobraFlags(rootCmd)
 
 	//validation config

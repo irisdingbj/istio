@@ -66,20 +66,28 @@ type Args struct {
 
 	// AccessListFile is the YAML file that specifies ids of the allowed mTLS peers.
 	AccessListFile string
+
+	//MeshConfigFilePath is the path for mesh config files
+	MeshConfigFilePath string
+
+	//MeshConfigFileCheckInterval is the check interval for mesh config files in File System
+	MeshConfigFileCheckInterval time.Duration
 }
 
 // DefaultArgs allocates an Args struct initialized with Mixer's default configuration.
 func DefaultArgs() *Args {
 	return &Args{
-		APIAddress:             "tcp://0.0.0.0:9901",
-		MaxReceivedMessageSize: 1024 * 1024,
-		MaxConcurrentStreams:   1024,
-		LoggingOptions:         log.DefaultOptions(),
-		IntrospectionOptions:   ctrlz.DefaultOptions(),
-		Insecure:               false,
-		AccessListFile:         defaultAccessListFile,
-		EnableServer:           true,
-		CredentialOptions:      creds.DefaultOptions(),
+		APIAddress:                  "tcp://0.0.0.0:9901",
+		MaxReceivedMessageSize:      1024 * 1024,
+		MaxConcurrentStreams:        1024,
+		LoggingOptions:              log.DefaultOptions(),
+		IntrospectionOptions:        ctrlz.DefaultOptions(),
+		Insecure:                    false,
+		AccessListFile:              defaultAccessListFile,
+		EnableServer:                true,
+		CredentialOptions:           creds.DefaultOptions(),
+		MeshConfigFilePath:          "",
+		MeshConfigFileCheckInterval: 60 * time.Second,
 	}
 }
 
@@ -101,5 +109,7 @@ func (a *Args) String() string {
 	fmt.Fprintf(buf, "KeyFile: %s\n", a.CredentialOptions.KeyFile)
 	fmt.Fprintf(buf, "CertificateFile: %s\n", a.CredentialOptions.CertificateFile)
 	fmt.Fprintf(buf, "CACertificateFile: %s\n", a.CredentialOptions.CACertificateFile)
+	fmt.Fprintf(buf, "MeshConfigFilePath: %s\n", a.MeshConfigFilePath)
+	fmt.Fprintf(buf, "MeshConfigFileCheckInterval: %v\n", a.MeshConfigFileCheckInterval)
 	return buf.String()
 }

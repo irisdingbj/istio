@@ -26,6 +26,7 @@ import (
 	"istio.io/istio/pkg/mcp/creds"
 
 	mcp "istio.io/api/mcp/v1alpha1"
+	"istio.io/istio/galley/pkg/file"
 	"istio.io/istio/galley/pkg/kube/source"
 	"istio.io/istio/galley/pkg/metadata"
 
@@ -45,7 +46,7 @@ type Server struct {
 	shutdown chan error
 
 	grpcServer *grpc.Server
-	processor  *runtime.Processor
+	processors []*runtime.Processor
 	mcp        *server.Server
 	listener   net.Listener
 	controlZ   *ctrlz.Server
@@ -91,7 +92,15 @@ func newServer(a *Args, p patchTable) (*Server, error) {
 	}
 
 	distributor := snapshot.New()
-	s.processor = runtime.NewProcessor(src, distributor)
+	s.processors = append(s.processors, runtime.NewProcessor(src, distributor))
+	mechConfigFilePath := a.MeshConfigFilePath
+	if mechConfigFilePath != "" {
+		fileSrc, err := file.New(a.MeshConfigFilePath, a.MeshConfigFileCheckInterval)
+		if err != nil {
+			return nil, err
+		}
+		s.processors = append(s.processors, runtime.NewProcessor(fileSrc, distributor))
+	}
 
 	var grpcOptions []grpc.ServerOption
 	grpcOptions = append(grpcOptions, grpc.MaxConcurrentStreams(uint32(a.MaxConcurrentStreams)))
@@ -146,10 +155,13 @@ func newServer(a *Args, p patchTable) (*Server, error) {
 func (s *Server) Run() {
 	s.shutdown = make(chan error, 1)
 	go func() {
-		err := s.processor.Start()
-		if err != nil {
-			s.shutdown <- err
-			return
+		var err error
+		for _, processor := range s.processors {
+			err = processor.Start()
+			if err != nil {
+				s.shutdown <- err
+				return
+			}
 		}
 
 		// start serving
@@ -186,10 +198,11 @@ func (s *Server) Close() error {
 		s.controlZ.Close()
 	}
 
-	if s.processor != nil {
-		s.processor.Stop()
+	for _, processor := range s.processors {
+		if processor != nil {
+			processor.Stop()
+		}
 	}
-
 	if s.listener != nil {
 		_ = s.listener.Close()
 	}
