@@ -45,10 +45,6 @@ var (
 	scheme *runtime.Scheme
 )
 
-const (
-	configSecretName = "istio-kubeconfig"
-)
-
 func init() {
 	scheme = runtime.NewScheme()
 	utilruntime.Must(v1.AddToScheme(scheme))
@@ -72,6 +68,11 @@ const (
 	DefaultServiceAccountName = "istio-reader-service-account"
 
 	remoteSecretPrefix = "istio-remote-secret-"
+
+	configSecretName = "istio-kubeconfig"
+
+	// default service account to use for external Istiod cluster access.
+	DefaultConfigServiceAccountName = "istiod-service-account"
 )
 
 func remoteSecretNameFromClusterName(clusterName string) string {
@@ -389,26 +390,29 @@ func createRemoteSecret(opt RemoteSecretOptions, client kubernetes.Interface, en
 		opt.ClusterName = string(uid)
 	}
 
+	var secretName string
+	var err error
+	switch opt.Type {
+	case SecretTypeRemote:
+		secretName = remoteSecretNameFromClusterName(opt.ClusterName)
+	case SecretTypeConfig:
+		secretName = configSecretName
+		opt.ServiceAccountName = DefaultConfigServiceAccountName
+	case "":
+		secretName = remoteSecretNameFromClusterName(opt.ClusterName)
+	default:
+		err = fmt.Errorf("unsupported type: %v", opt.Type)
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	tokenSecret, err := getServiceAccountSecretToken(client, opt.ServiceAccountName, opt.Namespace)
 	if err != nil {
 		return nil, fmt.Errorf("could not get access token to read resources from local kube-apiserver: %v", err)
 	}
 
 	server, err := getServerFromKubeconfig(opt.Context, env.GetConfig())
-	if err != nil {
-		return nil, err
-	}
-	var secretName string
-	switch opt.Type {
-	case SecretTypeRemote:
-		secretName = remoteSecretNameFromClusterName(opt.ClusterName)
-	case SecretTypeConfig:
-		secretName = configSecretName
-	case "":
-		secretName = remoteSecretNameFromClusterName(opt.ClusterName)
-	default:
-		err = fmt.Errorf("unsupported type: %v", opt.Type)
-	}
 	if err != nil {
 		return nil, err
 	}
