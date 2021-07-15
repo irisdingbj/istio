@@ -48,10 +48,14 @@ func NewKubernetesRA(raOpts *IstioRAOptions) (*KubernetesRA, error) {
 }
 
 func (r *KubernetesRA) kubernetesSign(csrPEM []byte, csrName string, caCertFile string, certSigner string) ([]byte, error) {
+	certSignerDomain := r.raOpts.CertSignerDomain
+	if r.raOpts.CertSignerDomain != "" {
+		certSignerDomain += "/"
+	}
 	if certSigner == "" {
-		certSigner = r.raOpts.CertSignerDomain + "/" + r.raOpts.CaSigner
+		certSigner = certSignerDomain + r.raOpts.CaSigner
 	} else {
-		certSigner = r.raOpts.CertSignerDomain + "/" + certSigner
+		certSigner = certSignerDomain + certSigner
 	}
 	csrSpec := &cert.CertificateSigningRequestSpec{
 		SignerName: &certSigner,
